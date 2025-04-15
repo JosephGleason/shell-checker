@@ -1,62 +1,66 @@
 #!/bin/bash
-# Define color codes for terminal output
+
+# Color codes
 GREEN="\033[0;32m"
 RED="\033[0;31m"
-NC="\033[0m" # No Color
+NC="\033[0m"
 
-# Path to your shell executable
-# CHANGE hsh TO WHATEVER YOUR EXECUTABLE IS CALLED WHEN YOU GCC
+# Path to your compiled shell executable
 SHELL_EXEC=../holbertonschool-simple_shell/hsh
 
-# Check if the shell exists and is executable
+# Check if your shell binary exists
 if [ ! -x "$SHELL_EXEC" ]; then
     echo -e "${RED}Error: $SHELL_EXEC not found or not executable${NC}"
     exit 1
 fi
 
-#############################################
-# Task 2: Execute /bin/ls in non-interactive mode
-#############################################
-echo "/bin/ls" | $SHELL_EXEC > my_output.txt
-/bin/ls > expected_output.txt
+# Create a unique clean test environment in /tmp
+TEST_DIR=$(mktemp -d /tmp/shell_test_XXXXXX)
+cp "$SHELL_EXEC" "$TEST_DIR/hsh"
+cd "$TEST_DIR" || exit 1
 
-if diff my_output.txt expected_output.txt > /dev/null; then
+#############################################
+# Task 2: /bin/ls non-interactive
+#############################################
+echo "/bin/ls" | ./hsh > .shell_output.txt
+/bin/ls > .expected_output.txt
+
+if diff .shell_output.txt .expected_output.txt > /dev/null; then
     echo -e "${GREEN}Task 2: PASS${NC}"
 else
     echo -e "${RED}Task 2: FAIL${NC}"
-    diff my_output.txt expected_output.txt
+    diff .shell_output.txt .expected_output.txt
 fi
-
 #############################################
-# Task 3: Execute /bin/echo with arguments
+# Task 3: /bin/echo hello world
 #############################################
-echo "/bin/echo hello world" | $SHELL_EXEC > my_output.txt
-/bin/echo hello world > expected_output.txt
+echo "/bin/echo hello world" | ./hsh > shell_output.txt
+/bin/echo hello world > .expected_output.txt
 
-if diff my_output.txt expected_output.txt > /dev/null; then
+if diff shell_output.txt .expected_output.txt > /dev/null; then
     echo -e "${GREEN}Task 3: PASS${NC}"
 else
     echo -e "${RED}Task 3: FAIL${NC}"
-    diff my_output.txt expected_output.txt
+    diff shell_output.txt .expected_output.txt
 fi
 
 #############################################
-# Task 4: Use PATH to resolve command (e.g. ls)
+# Task 4: PATH-resolved ls
 #############################################
-echo "ls" | $SHELL_EXEC > my_output.txt
+echo "ls" | ./hsh > shell_output.txt
 ls > expected_output.txt
 
-if diff my_output.txt expected_output.txt > /dev/null; then
+if diff shell_output.txt expected_output.txt > /dev/null; then
     echo -e "${GREEN}Task 4: PASS${NC}"
 else
     echo -e "${RED}Task 4: FAIL${NC}"
-    diff my_output.txt expected_output.txt
+    diff shell_output.txt expected_output.txt
 fi
 
 #############################################
-# Task 5: Built-in 'exit' command
+# Task 5: Built-in exit
 #############################################
-echo "exit" | $SHELL_EXEC
+echo "exit" | ./hsh
 status=$?
 
 if [ $status -eq 0 ]; then
@@ -66,22 +70,25 @@ else
 fi
 
 #############################################
-# Task 6: Built-in 'env' command
+# Task 6: Built-in env
 #############################################
-echo "env" | $SHELL_EXEC > my_output.txt
+echo "env" | ./hsh > shell_output.txt
 env > expected_output.txt
 
-if diff my_output.txt expected_output.txt > /dev/null; then
+grep -v "^_=" shell_output.txt > tmp_shell.txt
+grep -v "^_=" expected_output.txt > tmp_expected.txt
+
+if diff tmp_shell.txt tmp_expected.txt > /dev/null; then
     echo -e "${GREEN}Task 6: PASS${NC}"
 else
     echo -e "${RED}Task 6: FAIL${NC}"
-    diff my_output.txt expected_output.txt
+    diff tmp_shell.txt tmp_expected.txt
 fi
 
 #############################################
-# Task 7: Handle EOF (Ctrl+D) with no input
+# Task 7: Handle EOF (Ctrl+D)
 #############################################
-$SHELL_EXEC < /dev/null > my_output.txt
+./hsh < /dev/null > shell_output.txt
 status=$?
 
 if [ $status -eq 0 ]; then
@@ -91,19 +98,19 @@ else
 fi
 
 #############################################
-# Task 8: Invalid command should show error
+# Task 8: Invalid command error
 #############################################
-echo "garbagecommand" | $SHELL_EXEC > my_output.txt 2>&1
+echo "badcommand" | ./hsh > shell_output.txt 2>&1
 
-if grep -q "not found" my_output.txt; then
+if grep -q "not found" shell_output.txt; then
     echo -e "${GREEN}Task 8: PASS${NC}"
 else
-    echo -e "${RED}Task 8: FAIL (no error message for invalid command)${NC}"
-    cat my_output.txt
+    echo -e "${RED}Task 8: FAIL (no error for invalid command)${NC}"
+    cat shell_output.txt
 fi
 
 #############################################
-# Optional: Clean up temporary files
+# Cleanup
 #############################################
-rm -f my_output.txt expected_output.txt
-
+cd /
+rm -rf "$TEST_DIR"
